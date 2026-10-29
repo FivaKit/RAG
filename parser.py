@@ -5,38 +5,38 @@ import re
 import time
 from pathlib import Path
 from urllib.parse import urljoin
-
+import logging
 import aiohttp
 from bs4 import BeautifulSoup
 
 
 class Parser:
 
-    def __init__(self, MAX_CONCURRENT=5):
-
-    # Настройки
-        self.BASE_URL = "https://www.consultant.ru/"
-        self.INDEX_URL = urljoin(self.BASE_URL, "document/cons_doc_LAW_10699/")
-
-        self.HEADERS = {
-            "Accept": "text/html",
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_3_1) "
-                "AppleWebKit/605.1.15 (KHTML, like Gecko) "
-                "Version/15.4 Safari/605.1.15"
-            )
-        }
-
-        self.MAX_CONCURRENT = 5
-
-        self.ARTICLE_PATTERN = re.compile(
+    logger = logging.getLogger(__name__)
+    BASE_URL = "https://www.consultant.ru/"
+    INDEX_URL = urljoin(BASE_URL, "document/cons_doc_LAW_10699/")
+    HEADERS = {
+                "Accept": "text/html",
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_3_1) "
+                    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+                    "Version/15.4 Safari/605.1.15"
+                )
+            }
+    
+    ARTICLE_PATTERN = re.compile(
             r"^Статья\s+(\d+(?:\.\d+)*)\.\s*(.+)$",
             flags=re.IGNORECASE
         )
 
+    
+    def __init__(self, MAX_CONCURRENT=5):
+    # Настройки
+        self.MAX_CONCURRENT = MAX_CONCURRENT
+        
 
     # Извлечение ссылок на статьи
-    def get_article_links(self, html):
+    def extract_article_links(self, html):
         soup = BeautifulSoup(html, "lxml")
 
         toc = soup.select_one(".document-page__toc")
@@ -74,7 +74,8 @@ class Parser:
 
 
     # Извлечение текста статьи
-    def get_content(self, html):
+    @staticmethod
+    def extract_content(html):
         soup = BeautifulSoup(html, "lxml")
 
         content_block = soup.select_one(
@@ -107,12 +108,12 @@ class Parser:
 
 
     # Получение одной статьи
-    async def get_info(self, article, session, semaphore):
+    async def fetch_article(self, article, session, semaphore):
         url = article["url"]
 
         try:
             html = await self.fetch_html(url, session, semaphore)
-            content = self.get_content(html)
+            content = self.extract_content(html)
 
             return {
                 "number": article["number"],
@@ -140,7 +141,7 @@ class Parser:
 
 
     # Основная функция
-    async def parser(self):
+    async def parse(self):
         timeout = aiohttp.ClientTimeout(
             total=20,
             connect=5,
@@ -159,13 +160,13 @@ class Parser:
                 self.INDEX_URL, session, semaphore
             )
 
-            links = self.get_article_links(html)
+            links = self.extract_article_links(html)
 
-            print(f"Найдено статей: {len(links)}")
+            self.logger.info(f"Найдено статей: {len(links)}")
 
             # Создаём корутины
             tasks = [
-                self.get_info(article, session, semaphore)
+                self.fetch_article(article, session, semaphore)
                 for article in links
             ]
 
@@ -194,7 +195,7 @@ if __name__ == "__main__":
     parser = Parser()
 
     try:
-        articles, errors = asyncio.run(parser.parser())
+        articles, errors = asyncio.run(parser.parse())
 
     except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
         print(f"Не удалось получить оглавление: {e}")

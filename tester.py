@@ -23,13 +23,13 @@ headers = {
 }
 
 
-def get_content(soup):
+def extract_content(soup):
     text = soup.body.find(class_ = "document-page__content document-page_left-padding")
     p_s = text.find_all('p')
     content = '\n'.join(p.get_text(' ', strip = True) for p in p_s)
     return content
 
-async def get_info(link, session, semaphore):
+async def fetch_article(link, session, semaphore):
     async with semaphore:
         url = 'https://www.consultant.ru/' + link['href']
         try:
@@ -42,7 +42,7 @@ async def get_info(link, session, semaphore):
                 match = re.search(pattern, link.text)
                 number = match.group(1) 
                 title = match.group(2)  
-                content = get_content(soup_tree)
+                content = extract_content(soup_tree)
 
                 res = {
                             'number':number,
@@ -80,7 +80,7 @@ async def main():
                     if 'статья' not in links[idx].text.lower():
                         continue
 
-                    tasks.append(get_info(links[idx], session, semaphore)) 
+                    tasks.append(fetch_article(links[idx], session, semaphore)) 
                     
 
                 tasks = await asyncio.gather(*tasks)
