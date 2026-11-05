@@ -33,7 +33,7 @@ class Parser:
     def __init__(self, MAX_CONCURRENT=5):
     # Настройки
         self.MAX_CONCURRENT = MAX_CONCURRENT
-        
+
 
     # Извлечение ссылок на статьи
     def extract_article_links(self, html):
@@ -189,36 +189,36 @@ class Parser:
         return articles, errors
 
 
-if __name__ == "__main__":
-    start = time.perf_counter()
+# if __name__ == "__main__":
+#     start = time.perf_counter()
 
-    parser = Parser()
+#     parser = Parser()
 
-    try:
-        articles, errors = asyncio.run(parser.parse())
+#     try:
+#         articles, errors = asyncio.run(parser.parse())
 
-    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
-        print(f"Не удалось получить оглавление: {e}")
+#     except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
+#         print(f"Не удалось получить оглавление: {e}")
 
-    else:
-        # Сохраняем успешно загруженные статьи
-        if articles:
-            Path("articles.json").write_text(
-                json.dumps(articles, ensure_ascii=False, indent=2),
-                encoding="utf-8"
-            )
+#     else:
+#         # Сохраняем успешно загруженные статьи
+#         if articles:
+#             Path("articles.json").write_text(
+#                 json.dumps(articles, ensure_ascii=False, indent=2),
+#                 encoding="utf-8"
+#             )
 
-        # Сохраняем ошибки
-        Path("errors.json").write_text(
-            json.dumps(errors, ensure_ascii=False, indent=2),
-            encoding="utf-8"
-        )
+#         # Сохраняем ошибки
+#         Path("errors.json").write_text(
+#             json.dumps(errors, ensure_ascii=False, indent=2),
+#             encoding="utf-8"
+#         )
 
-        print(f"Успешно загружено: {len(articles)}")
-        print(f"Ошибок: {len(errors)}")
+#         print(f"Успешно загружено: {len(articles)}")
+#         print(f"Ошибок: {len(errors)}")
 
-        if articles:
-            print(articles[-1])
+#         if articles:
+#             print(articles[-1])
 
-    finally:
-        print(f"Время выполнения: {time.perf_counter() - start:.2f} с")
+#     finally:
+#         print(f"Время выполнения: {time.perf_counter() - start:.2f} с")
